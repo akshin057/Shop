@@ -12,6 +12,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -27,6 +28,9 @@ import androidx.core.view.WindowInsetsCompat;
 import com.example.shop.databinding.ActivityListBinding;
 import com.example.shop.item.Item;
 import com.example.shop.models.ListAdapter;
+import com.example.shop.utils.MyAlertDialog;
+import com.example.shop.utils.Removable;
+import com.example.shop.utils.Updatable;
 
 import org.w3c.dom.Text;
 
@@ -34,12 +38,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ListActivity extends AppCompatActivity {
+public class ListActivity extends AppCompatActivity implements Removable, Updatable {
 
     ActivityListBinding binding;
     Bitmap bitmap = null;
     List<Item> itemList = new ArrayList<>();
     public static final int GALLERY_REQUEST = 333;
+    private ListAdapter adapter = null;
+    private Integer position;
+    private Boolean check = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,47 +70,46 @@ public class ListActivity extends AppCompatActivity {
                     bitmap, binding.descriptionET.getText().toString());
 
             itemList.add(item);
-            ListAdapter adapter = new ListAdapter(this, itemList);
+            adapter = new ListAdapter(this, itemList);
             binding.listViewLV.setAdapter(adapter);
+            adapter.notifyDataSetChanged();
 
             binding.nameET.getText().clear();
             binding.priceET.getText().clear();
             binding.descriptionET.getText().clear();
             binding.circleImageIV.setImageResource(R.drawable.product);
+
         });
 
         binding.listViewLV.setOnItemClickListener((parent, view, position, id) -> {
             Item item = itemList.get(position);
+            this.position = position;
 
-            AlertDialog.Builder builder =  new AlertDialog.Builder(this);
-            View window = LayoutInflater.from(this).inflate(R.layout.activity_info, null);
-            builder.setView(window);
-
-            ImageView imageView = window.findViewById(R.id.imageIV);
-            TextView nameTV = window.findViewById(R.id.nameTV);
-            TextView priceTV = window.findViewById(R.id.priceTV);
-            TextView descriptionTV = window.findViewById(R.id.descriptionTV);
-
-            imageView.setImageBitmap(item.getImage());
-            nameTV.setText(item.getName());
-            priceTV.setText(item.getPrice());
-            descriptionTV.setText(item.getDescription());
-
-            builder.setNegativeButton("Назад", (dialog, which) -> {
-                dialog.dismiss();
-            });
-
-            builder.create().show();
-
-
-
-
-
-
+            MyAlertDialog dialog = new MyAlertDialog();
+            Bundle args = new Bundle();
+            args.putParcelable("item", item);
+            dialog.setArguments(args);
+            dialog.show(getSupportFragmentManager(), "custom");
 
         });
 
+    }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (!getIntent().getBooleanExtra("check", true)) {
+            check = getIntent().getExtras().getBoolean("check");
+            if (!check) {
+                itemList = (List<Item>) getIntent().getSerializableExtra("list");
+                if (itemList != null) {
+                    adapter = new ListAdapter(this, itemList);
+                    check = true;
+                    binding.listViewLV.setAdapter(adapter);
+                }
+            }
+        }
     }
 
     @Override
@@ -133,11 +139,26 @@ public class ListActivity extends AppCompatActivity {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+
             binding.circleImageIV.setImageBitmap(bitmap);
         } else {
             binding.circleImageIV.setImageResource(R.drawable.product);
         }
 
+    }
 
+    @Override
+    public void remove(Item item) {
+        adapter.remove(item);
+    }
+
+    @Override
+    public void update(Item item) {
+        Intent intent = new Intent(this, DetailsActivity.class);
+        intent.putExtra("item", item);
+        intent.putExtra("list", (ArrayList<Item>) itemList);
+        intent.putExtra("position", this.position);
+        intent.putExtra("check", check);
+        startActivity(intent);
     }
 }

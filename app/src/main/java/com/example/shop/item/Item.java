@@ -32,6 +32,7 @@ public class Item implements Parcelable {
         name = in.readString();
         price = in.readString();
         image = in.readParcelable(Bitmap.class.getClassLoader());
+        description = in.readString();
     }
 
     public static final Creator<Item> CREATOR = new Creator<Item>() {
@@ -80,5 +81,6 @@ public class Item implements Parcelable {
         dest.writeString(name);
         dest.writeString(price);
         dest.writeParcelable(image, flags);
+        dest.writeString(description);
     }
 }
